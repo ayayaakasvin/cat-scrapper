@@ -7,10 +7,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	apiserver "github.com/ayayaakasvin/cat-scrapper/internal/api-server"
+	"github.com/ayayaakasvin/cat-scrapper/internal/config"
+	saveengine "github.com/ayayaakasvin/cat-scrapper/internal/save-engine"
+	"github.com/ayayaakasvin/goroutinesupervisor"
 )
-
 
 func main() {
 	if err := run(); err != nil {
@@ -24,17 +27,16 @@ func run() error {
 	defer stop()
 
 	log := slog.Default()
+	cfg := config.MustLoadConfig()
+
+    sg, err := saveengine.NewSaveEngine(cfg.SavePath)
 
 	gs := setupSupervisor(ctx, log)
 
 	app := apiserver.NewApiServer(
-		&cfg.HTTPServer,
-		&cfg.CorsConfig,
-		cfg.GateawaySecret,
+		&cfg.HTTPServerConfig,
 		log,
-		repo,
-		cache,
-		jwtM,
+        sg,
 	)
 
 	gs.Go("http-server", app.Start)
@@ -45,22 +47,20 @@ func run() error {
 	defer cancel()
 
 	app.Stop(shutdownCtx)
-	repo.Close()
-	cache.Close()
 
 	return err
 }
 
-func setupSupervisor(ctx context.Context, log *logrus.Logger) *goroutinesupervisor.GoRoutineSupervisor {
+func setupSupervisor(ctx context.Context, log *slog.Logger) *goroutinesupervisor.GoRoutineSupervisor {
 	gs := goroutinesupervisor.NewSupervisor(ctx)
 	gs.WithHandler(func(e goroutinesupervisor.Event) {
 		switch e.Type {
 		case goroutinesupervisor.EventTaskStarted:
-			log.Infof("Task %s started at %s", e.Task, e.Started.String())
+			log.Info("Task started", "task", e.Task, "time", e.Started.String())
 		case goroutinesupervisor.EventTaskFinished:
-			log.Infof("Task %s finished at %s", e.Task, e.Ended.String())
+			log.Info("Task finished", "task", e.Task, "time", e.Ended.String())
 		case goroutinesupervisor.EventTaskFailed:
-			log.Infof("Task %s failed at %s", e.Task, e.Ended.String())
+			log.Info("Task failed", "task", e.Task, "time", e.Ended.String())
 		default:
 		}
 	})

@@ -7,28 +7,37 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/ayayaakasvin/cat-photo-fetch/image-pool"
+	"github.com/ayayaakasvin/cat-scrapper/internal/api-server/handlers"
+	"github.com/ayayaakasvin/cat-scrapper/internal/api-server/middlewares"
 	"github.com/ayayaakasvin/cat-scrapper/internal/config"
+	saveengine "github.com/ayayaakasvin/cat-scrapper/internal/save-engine"
 	"github.com/ayayaakasvin/lightmux"
 )
 
 type ApiServer struct {
-	server *http.Server
-	httpcfg *config.Config
+	server  *http.Server
+	httpcfg *config.HTTPServerConfig
+	corscfg *config.CorsConfig
+	lmux    *lightmux.LightMux
 
-	lmux *lightmux.LightMux
+	pool *imagepool.CatImagePool
+	sg   *saveengine.SaveEngine
 
 	logger *slog.Logger
 }
 
 func NewApiServer(
-	httpcfg *config.Config,
+	httpcfg *config.HTTPServerConfig,
 	logger *slog.Logger,
-	) *ApiServer {
+	sg *saveengine.SaveEngine,
+) *ApiServer {
 	return &ApiServer{
-
+		httpcfg: httpcfg,
+		logger:  logger,
+		sg: sg,
 	}
 }
-
 
 func (s *ApiServer) Start(ctx context.Context) error {
 	s.setupServer()
@@ -65,28 +74,18 @@ func (s *ApiServer) setupServer() {
 func (s *ApiServer) setupLightMux() {
 	s.lmux = lightmux.NewLightMux(s.server)
 
-	mws := middlewares.NewHTTPMiddlewares(s.logger, *s.corscfg, s.gateawaySecret, s.cache, s.jwtM)
-	hndlrs := handlers.NewHTTPHandlers(s.repo, s.cache, s.logger, s.jwtM)
+	mws := middlewares.NewHTTPMiddlewares(s.logger, *s.corscfg)
+	hndlrs := handlers.NewHTTPHandlers(s.logger, s.pool.Get, s.sg.SaveCatImage)
 
-	s.lmux.Use(mws.RecoverMiddleware, mws.GateAwayMiddleware, mws.LoggerMiddleware, mws.CORSMiddleware)
+	s.lmux.Use(mws.RecoverMiddleware, mws.LoggerMiddleware, mws.CORSMiddleware)
 
 	apiGroup := s.lmux.NewGroup("/api")
 	authGroup := apiGroup.ContinueGroup("/auth")
 
 	authGroup.NewRoute("/ping").Handle(http.MethodGet, hndlrs.PingHandler())
 
-	authGroup.NewRoute("/login", mws.RateLimitLoginMiddleware).Handle(http.MethodPost, hndlrs.LogIn())
-	authGroup.NewRoute("/register", mws.RateLimitRegisterMiddleware).Handle(http.MethodPost, hndlrs.Register())
-	authGroup.NewRoute("/logout", mws.JWTAuthMiddleware).Handle(http.MethodDelete, hndlrs.LogOut())
-	authGroup.NewRoute("/refresh").Handle(http.MethodPost, hndlrs.RefreshTheToken())
-
-	authGroup.NewRoute("/public/user").Handle(http.MethodGet, hndlrs.PublicUserInfo())
-	authGroup.NewRoute("/me", mws.JWTAuthMiddleware).Handle(http.MethodGet, hndlrs.PrivateUserInfo())
-
-	s.lmux.Mux().HandleFunc("/docs/", httpSwagger.WrapHandler)
-
 	s.logger.Info("LightMux has been set up")
-	s.logger.Infof("Available handlers:\n")
+	s.logger.Info("Available handlers")
 	s.lmux.PrintMiddlewareInfo()
 	s.lmux.PrintRoutes()
 }

@@ -22,11 +22,23 @@ type Config struct {
 	// Add your configuration fields here
 	// Example:
 	// Port int `yaml:"port"`
-	HTTPServer `yaml:"http-server"`
+	HTTPServerConfig `yaml:"http-server"`
+	CorsConfig       `yaml:"cors"`
+	Logger           LoggerConfig `yaml:"logger"`
+	SavePath         string       `yaml:"save_path"`
+}
 
-	CorsConfig `yaml:"cors"`
-
-	GateawaySecret string
+type LoggerConfig struct {
+	Env     string `yaml:"env" env-required:"true"`
+	Service string `yaml:"service" env-required:"true"`
+	// 	const (
+	// 	LevelDebug Level = -4
+	// 	LevelInfo  Level = 0
+	// 	LevelWarn  Level = 4
+	// 	LevelError Level = 8
+	// )
+	Level int  `yaml:"level" env-default:"0"`
+	JSON  bool `yaml:"json" env-default:"false"`
 }
 
 type CorsConfig struct {
@@ -36,7 +48,7 @@ type CorsConfig struct {
 	AllowedCredentials bool     `yaml:"allow_credentials"`
 }
 
-type HTTPServer struct {
+type HTTPServerConfig struct {
 	Address     string        `yaml:"address"						env-default:"localhost:8080"`
 	Timeout     time.Duration `yaml:"timeout" 															env-required:"true"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" 														env-required:"true"`
