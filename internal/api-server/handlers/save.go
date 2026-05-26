@@ -1,31 +1,64 @@
 package handlers
 
 import (
+	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
+	"sync"
 
 	saveengine "github.com/ayayaakasvin/cat-scrapper/internal/save-engine"
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 )
 
-func (mw *Handlers) SaveOnceHandler() http.HandlerFunc {
+func (mw *Handlers) SaveHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		j := &saveengine.Job{
-			ID:        ulid.Make().String(),
-			From:      r.Host,
-			ImageUUID: uuid.NewString(),
+		var req struct {
+			Count *int `json:"count"`
 		}
 
-		img := mw.fetchFunc()
-
-		pathToFile, err := mw.saveFunc(j, img)
-		if err != nil {
-			mw.logger.Error("Save error", "error", err)
-			http.Error(w, "failed", http.StatusInternalServerError)
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil && !errors.Is(err, io.EOF) {
+			http.Error(w, "invalid json", http.StatusBadRequest)
 			return
 		}
 
-		mw.logger.Info("File saved", "path", pathToFile)
+		count := 1
+		if req.Count != nil {
+			count = *req.Count
+		}
+
+		host := r.Host
+
+		wg := sync.WaitGroup{}
+
+		for i := 0; i < count; i++ {
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				j := &saveengine.Job{
+					ID:        ulid.Make().String(),
+					From:      host,
+					ImageUUID: uuid.NewString(),
+				}
+
+				img := mw.fetchFunc()
+
+				pathToFile, err := mw.saveFunc(j, img)
+				if err != nil {
+					mw.logger.Error("Save error", "error", err)
+					return
+				}
+
+				mw.logger.Info("File saved", "path", pathToFile)
+			}()
+		}
+
+		wg.Wait()
+
 		w.WriteHeader(http.StatusOK)
 	}
 }
