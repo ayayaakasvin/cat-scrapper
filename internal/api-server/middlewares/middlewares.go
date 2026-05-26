@@ -16,7 +16,7 @@ type Middlewares struct {
 	allowCredentials bool
 }
 
-func NewHTTPMiddlewares(logger *slog.Logger, corsCfg config.CorsConfig) *Middlewares {
+func NewHTTPMiddlewares(logger *slog.Logger, corsCfg *config.CorsConfig) *Middlewares {
 	return &Middlewares{
 		logger:         logger,
 

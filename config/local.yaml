@@ -1,0 +1,21 @@
+http-server:
+  address: "localhost:8080"
+  timeout: 10s
+  idle_timeout: 30s
+
+cors:
+  allowed_origins: 
+    - "*"
+  allowed_methods: 
+    - "*"
+  allowed_headers:
+    - "*"
+  allow_credentials: true
+
+logger:
+  env: "local"
+  service: "cat-scrapper"
+  level: -4
+  json: false
+  
+save_path: "/mnt/codebase/code/vscode/cat-scrapper/cats"

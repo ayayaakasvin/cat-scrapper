@@ -6,15 +6,11 @@ import (
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
-	"github.com/joho/godotenv"
+	// "github.com/joho/godotenv"
 )
 
 const (
-	configPathEnvKey  = "CONFIG_PATH"
-	postgresURLEnvKey = "POSTGRES_URL"
-	valkeyURLEnvKey   = "VALKEY_URL"
-	jwtSecretKey      = "JWT_SECRET"
-	gateawaySecretKey = "X_GATEAWAY_KEY"
+	configPathEnvKey = "CONFIG_PATH"
 )
 
 // Config represents the configuration structure
@@ -56,9 +52,9 @@ type HTTPServerConfig struct {
 
 // MustLoadConfig loads the configuration from the specified path
 func MustLoadConfig() *Config {
-	if err := godotenv.Load(); err != nil {
-		log.Println(".env not found, falling back to local variables")
-	}
+	// if err := godotenv.Load(); err != nil {
+	// 	log.Println(".env not found, falling back to local variables")
+	// }
 
 	configPath := os.Getenv(configPathEnvKey)
 	if configPath == "" {

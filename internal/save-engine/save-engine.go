@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	catphotofetch "github.com/ayayaakasvin/cat-photo-fetch"
 )
@@ -48,7 +49,8 @@ func (e *SaveEngine) SaveCatImage(uid *Job, img *catphotofetch.Image) (string, e
 		return "", fmt.Errorf("image reader is nil")
 	}
 	
-	filename := uid.ImageUUID + "." + img.ContentType
+	ctype := strings.TrimPrefix(img.ContentType, "image/")
+	filename := uid.ImageUUID + "." + ctype
 	fullpath := filepath.Join(e.savePath, filename)
 
 	file, err := os.Create(fullpath)

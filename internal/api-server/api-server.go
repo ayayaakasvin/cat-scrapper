@@ -4,8 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"runtime"
-	"time"
 
 	"github.com/ayayaakasvin/cat-photo-fetch/image-pool"
 	"github.com/ayayaakasvin/cat-scrapper/internal/api-server/handlers"
@@ -29,13 +27,17 @@ type ApiServer struct {
 
 func NewApiServer(
 	httpcfg *config.HTTPServerConfig,
+	corscfg *config.CorsConfig,
 	logger *slog.Logger,
 	sg *saveengine.SaveEngine,
+	pool *imagepool.CatImagePool,
 ) *ApiServer {
 	return &ApiServer{
 		httpcfg: httpcfg,
+		corscfg: corscfg,
 		logger:  logger,
 		sg: sg,
+		pool: pool,
 	}
 }
 
@@ -43,8 +45,6 @@ func (s *ApiServer) Start(ctx context.Context) error {
 	s.setupServer()
 	s.setupLightMux()
 
-	go s.printServerStatus(ctx)
-	go s.memStatPrint(ctx)
 	return func() error {
 		s.logger.Info("Server has been started", "port", s.httpcfg.Address)
 
@@ -74,45 +74,19 @@ func (s *ApiServer) setupServer() {
 func (s *ApiServer) setupLightMux() {
 	s.lmux = lightmux.NewLightMux(s.server)
 
-	mws := middlewares.NewHTTPMiddlewares(s.logger, *s.corscfg)
+	mws := middlewares.NewHTTPMiddlewares(s.logger, s.corscfg)
 	hndlrs := handlers.NewHTTPHandlers(s.logger, s.pool.Get, s.sg.SaveCatImage)
 
 	s.lmux.Use(mws.RecoverMiddleware, mws.LoggerMiddleware, mws.CORSMiddleware)
 
 	apiGroup := s.lmux.NewGroup("/api")
-	authGroup := apiGroup.ContinueGroup("/auth")
 
-	authGroup.NewRoute("/ping").Handle(http.MethodGet, hndlrs.PingHandler())
+	apiGroup.NewRoute("/ping").Handle(http.MethodGet, hndlrs.PingHandler())
+	apiGroup.NewRoute("/images").Handle(http.MethodPost, hndlrs.SaveHandler())
+
 
 	s.logger.Info("LightMux has been set up")
 	s.logger.Info("Available handlers")
 	s.lmux.PrintMiddlewareInfo()
 	s.lmux.PrintRoutes()
-}
-
-func (s *ApiServer) printServerStatus(ctx context.Context) {
-	ticker := time.NewTicker(time.Minute * 1)
-
-	for {
-		select {
-		case <-ticker.C:
-			s.logger.Info("Server is alive...")
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
-func (s *ApiServer) memStatPrint(ctx context.Context) {
-	ticker := time.NewTicker(time.Second * 15)
-
-	select {
-	case <-ticker.C:
-		var m runtime.MemStats
-		runtime.ReadMemStats(&m)
-		s.logger.Info("Mem stat", "Alloc MiB", m.Alloc/1024/1024)
-		time.Sleep(1 * time.Second)
-	case <-ctx.Done():
-		return
-	}
 }
