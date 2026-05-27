@@ -5,11 +5,11 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ayayaakasvin/cat-photo-fetch/image-pool"
+	imagepool "github.com/ayayaakasvin/cat-photo-fetch/image-pool"
 	"github.com/ayayaakasvin/cat-scrapper/internal/api-server/handlers"
 	"github.com/ayayaakasvin/cat-scrapper/internal/api-server/middlewares"
 	"github.com/ayayaakasvin/cat-scrapper/internal/config"
-	saveengine "github.com/ayayaakasvin/cat-scrapper/internal/save-engine"
+	"github.com/ayayaakasvin/cat-scrapper/internal/domain"
 	"github.com/ayayaakasvin/lightmux"
 )
 
@@ -20,7 +20,7 @@ type ApiServer struct {
 	lmux    *lightmux.LightMux
 
 	pool *imagepool.CatImagePool
-	sg   *saveengine.SaveEngine
+	sg   domain.Engine
 
 	logger *slog.Logger
 }
@@ -29,15 +29,15 @@ func NewApiServer(
 	httpcfg *config.HTTPServerConfig,
 	corscfg *config.CorsConfig,
 	logger *slog.Logger,
-	sg *saveengine.SaveEngine,
+	sg domain.Engine,
 	pool *imagepool.CatImagePool,
 ) *ApiServer {
 	return &ApiServer{
 		httpcfg: httpcfg,
 		corscfg: corscfg,
 		logger:  logger,
-		sg: sg,
-		pool: pool,
+		sg:      sg,
+		pool:    pool,
 	}
 }
 
@@ -75,7 +75,7 @@ func (s *ApiServer) setupLightMux() {
 	s.lmux = lightmux.NewLightMux(s.server)
 
 	mws := middlewares.NewHTTPMiddlewares(s.logger, s.corscfg)
-	hndlrs := handlers.NewHTTPHandlers(s.logger, s.pool.Get, s.sg.SaveCatImage)
+	hndlrs := handlers.NewHTTPHandlers(s.logger, s.pool.Get, s.sg.SaveImage)
 
 	s.lmux.Use(mws.RecoverMiddleware, mws.LoggerMiddleware, mws.CORSMiddleware)
 
@@ -83,7 +83,6 @@ func (s *ApiServer) setupLightMux() {
 
 	apiGroup.NewRoute("/ping").Handle(http.MethodGet, hndlrs.PingHandler())
 	apiGroup.NewRoute("/images").Handle(http.MethodPost, hndlrs.SaveHandler())
-
 
 	s.logger.Info("LightMux has been set up")
 	s.logger.Info("Available handlers")

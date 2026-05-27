@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"sync"
 
-	saveengine "github.com/ayayaakasvin/cat-scrapper/internal/save-engine"
+	"github.com/ayayaakasvin/cat-scrapper/internal/domain"
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 )
@@ -39,7 +39,7 @@ func (mw *Handlers) SaveHandler() http.HandlerFunc {
 			go func() {
 				defer wg.Done()
 
-				j := &saveengine.Job{
+				j := &domain.Job{
 					ID:        ulid.Make().String(),
 					From:      host,
 					ImageUUID: uuid.NewString(),

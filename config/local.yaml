@@ -1,5 +1,5 @@
 http-server:
-  address: "localhost:8080"
+  address: "0.0.0.0:8080"
   timeout: 10s
   idle_timeout: 30s
 
@@ -18,4 +18,6 @@ logger:
   level: -4
   json: false
   
-save_path: "/mnt/codebase/code/vscode/cat-scrapper/cats"
+save_path: "C:\\ayayaakasvin\\cat-scrapper\\cats"
+
+db: "cats_metadata.db"

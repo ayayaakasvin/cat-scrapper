@@ -1,4 +1,4 @@
-package saveengine
+package domain
 
 type Job struct {
 	ID        string // ULID

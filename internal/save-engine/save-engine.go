@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	catphotofetch "github.com/ayayaakasvin/cat-photo-fetch"
+	"github.com/ayayaakasvin/cat-scrapper/internal/domain"
 )
 
 type SaveEngine struct {
@@ -17,7 +18,7 @@ type SaveEngine struct {
 	sem      chan struct{}
 }
 
-func NewSaveEngine(savePath string) (*SaveEngine, error) {
+func NewSaveEngine(savePath string) (domain.Engine, error) {
 	if savePath == "" {
 		exePath, err := os.Executable()
 		if err != nil {
@@ -40,7 +41,7 @@ func NewSaveEngine(savePath string) (*SaveEngine, error) {
 
 // Saves cat image into directory of running program or into savePath.
 // The supplied reader must already contain the image bytes to be written.
-func (e *SaveEngine) SaveCatImage(uid *Job, img *catphotofetch.Image) (string, error) {
+func (e *SaveEngine) SaveImage(uid *domain.Job, img *catphotofetch.Image) (string, error) {
 	e.sem <- struct{}{}
 	defer func() { <-e.sem }()
 	r := img.Reader()
@@ -48,7 +49,7 @@ func (e *SaveEngine) SaveCatImage(uid *Job, img *catphotofetch.Image) (string, e
 	if r == nil {
 		return "", fmt.Errorf("image reader is nil")
 	}
-	
+
 	ctype := strings.TrimPrefix(img.ContentType, "image/")
 	filename := uid.ImageUUID + "." + ctype
 	fullpath := filepath.Join(e.savePath, filename)

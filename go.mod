@@ -8,8 +8,9 @@ require (
 	github.com/ayayaakasvin/goroutinesupervisor v0.0.0-20260224181310-03934b8f9a56
 	github.com/ayayaakasvin/lightmux v0.0.0-20260223204356-7c1b256c39bc
 	github.com/ilyakaznacheev/cleanenv v1.5.0
-	github.com/joho/godotenv v1.5.1
 )
+
+require github.com/joho/godotenv v1.5.1 // indirect
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
