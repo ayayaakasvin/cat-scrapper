@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	apiserver "github.com/ayayaakasvin/cat-scrapper/internal/api-server"
 	"github.com/ayayaakasvin/cat-scrapper/internal/api-server/libs/aliveapp"
 	"github.com/ayayaakasvin/cat-scrapper/internal/config"
+	"github.com/ayayaakasvin/cat-scrapper/internal/repository/sqlite"
 	saveengine "github.com/ayayaakasvin/cat-scrapper/internal/save-engine"
 	"github.com/ayayaakasvin/cat-scrapper/pkg/logger"
 	"github.com/ayayaakasvin/goroutinesupervisor"
@@ -35,9 +37,18 @@ func run() error {
 	log.Info("config", "env", cfg.Logger.Env)
 
 	sg, err := saveengine.NewSaveEngine(cfg.SavePath)
+	if err != nil {
+		return fmt.Errorf("init save engine error: %w", err)
+	}
+
 	pool, err := imagepool.NewCatImagePool()
 	if err != nil {
-		return fmt.Errorf("init error: %s", err)
+		return fmt.Errorf("init image pool error: %w", err)
+	}
+
+	repo, err := sqlite.NewSqliteConnection(filepath.Join(cfg.SavePath, "images.db"))
+	if err != nil {
+		return fmt.Errorf("init repository error: %w", err)
 	}
 
 	gs := setupSupervisor(ctx, log)
@@ -47,6 +58,7 @@ func run() error {
 		&cfg.CorsConfig,
 		log,
 		sg,
+		repo,
 		pool,
 	)
 

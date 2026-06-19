@@ -2,3 +2,4 @@ app.exe
 *.jpg
 cats/
 cats_metadata.db
+migration/images.db

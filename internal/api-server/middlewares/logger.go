@@ -31,7 +31,7 @@ func (m *Middlewares) LoggerMiddleware(next http.HandlerFunc) http.HandlerFunc {
 				slog.String("Result", result),
 			)
 		}()
-
+	
 		next.ServeHTTP(rw, r)
 	}
 }

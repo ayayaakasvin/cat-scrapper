@@ -18,6 +18,6 @@ logger:
   level: -4
   json: false
   
-save_path: "C:\\ayayaakasvin\\cat-scrapper\\cats"
+save_path: "/mnt/codebase/code/vscode/cat-scrapper/cats"
 
 db: "cats_metadata.db"

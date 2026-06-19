@@ -21,6 +21,7 @@ type ApiServer struct {
 
 	pool *imagepool.CatImagePool
 	sg   domain.Engine
+	fmdr domain.FileMetaDataRepository
 
 	logger *slog.Logger
 }
@@ -30,6 +31,7 @@ func NewApiServer(
 	corscfg *config.CorsConfig,
 	logger *slog.Logger,
 	sg domain.Engine,
+	fmdr domain.FileMetaDataRepository,
 	pool *imagepool.CatImagePool,
 ) *ApiServer {
 	return &ApiServer{
@@ -37,6 +39,7 @@ func NewApiServer(
 		corscfg: corscfg,
 		logger:  logger,
 		sg:      sg,
+		fmdr:    fmdr,
 		pool:    pool,
 	}
 }
@@ -75,7 +78,7 @@ func (s *ApiServer) setupLightMux() {
 	s.lmux = lightmux.NewLightMux(s.server)
 
 	mws := middlewares.NewHTTPMiddlewares(s.logger, s.corscfg)
-	hndlrs := handlers.NewHTTPHandlers(s.logger, s.pool.Get, s.sg.SaveImage)
+	hndlrs := handlers.NewHTTPHandlers(s.logger, s.fmdr, s.pool.Get, s.sg.SaveImage)
 
 	s.lmux.Use(mws.RecoverMiddleware, mws.LoggerMiddleware, mws.CORSMiddleware)
 
@@ -83,6 +86,9 @@ func (s *ApiServer) setupLightMux() {
 
 	apiGroup.NewRoute("/ping").Handle(http.MethodGet, hndlrs.PingHandler())
 	apiGroup.NewRoute("/images").Handle(http.MethodPost, hndlrs.SaveHandler())
+	apiGroup.NewRoute("/dashboard").Handle(http.MethodGet, hndlrs.DashboardHandler())
+	apiGroup.NewRoute("/dashboard/list").Handle(http.MethodGet, hndlrs.DashboardListHandler())
+	apiGroup.NewRoute("/files").Handle(http.MethodGet, hndlrs.ServeFile())
 
 	s.logger.Info("LightMux has been set up")
 	s.logger.Info("Available handlers")

@@ -9,7 +9,7 @@ import "net/http"
 // @Produce      text/plain
 // @Success      200  {string}  string  "pong"
 // @Router       /api/auth/ping [get]
-func (mw *Handlers) PingHandler() http.HandlerFunc {
+func (h *Handlers) PingHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("pong"))

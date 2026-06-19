@@ -1,0 +1,17 @@
+<h1>Dashboard</h1>
+
+{{range .}}
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+    
+    <a href="/api/files?id={{.ID}}">
+        <img src="/thumb/{{.ID}}" width="80" height="80" style="object-fit:cover;">
+    </a>
+
+    <div>
+        <div><b>{{.Filename}}</b></div>
+        <div>{{.Size}} bytes</div>
+        <div>{{.CreatedAt}}</div>
+    </div>
+
+</div>
+{{end}}

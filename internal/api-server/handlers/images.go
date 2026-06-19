@@ -12,7 +12,7 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
-func (mw *Handlers) SaveHandler() http.HandlerFunc {
+func (h *Handlers) SaveHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Count *int `json:"count"`
@@ -45,20 +45,41 @@ func (mw *Handlers) SaveHandler() http.HandlerFunc {
 					ImageUUID: uuid.NewString(),
 				}
 
-				img := mw.fetchFunc()
+				img := h.fetchFunc()
 
-				pathToFile, err := mw.saveFunc(j, img)
+				pathToFile, err := h.saveFunc(j, img)
 				if err != nil {
-					mw.logger.Error("Save error", "error", err)
+					h.logger.Error("Save error", "error", err)
 					return
 				}
 
-				mw.logger.Info("File saved", "path", pathToFile)
+				if h.fmdr != nil {
+					if err := h.fmdr.SaveRecord(j, img, pathToFile); err != nil {
+						h.logger.Error("Metadata save error", "path", pathToFile, "error", err)
+						return
+					}
+				}
+
+				h.logger.Info("File saved", "path", pathToFile)
 			}()
 		}
 
 		wg.Wait()
 
 		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func (h *Handlers) ServeFile() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.URL.Query().Get("id")
+
+		file, err := h.fmdr.GetByID(id)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+
+		http.ServeFile(w, r, file.Filepath)
 	}
 }

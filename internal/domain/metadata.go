@@ -11,7 +11,7 @@ type FileMetaData struct {
 	Extension string
 	MimeType  string
 
-	Size int
+	Size int64
 
 	Width  int
 	Height int
