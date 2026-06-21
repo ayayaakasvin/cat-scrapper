@@ -1,4 +1,4 @@
-package aliveapp
+package appstat
 
 import (
 	"context"
@@ -31,13 +31,18 @@ func MemStat(trate time.Duration, log *slog.Logger, ctx context.Context) func(ct
 		for {
 			select {
 			case <-ticker.C:
-				var m runtime.MemStats
-				runtime.ReadMemStats(&m)
-				log.Info("Allocated mem","MiB", m.Alloc/1024/1024)
+				m := AllocatedHeapMemory()
+				log.Info("Allocated mem", "MiB", m.Alloc/1024/1024)
 				time.Sleep(1 * time.Second)
 			case <-ctx.Done():
 				return ctx.Err()
 			}
 		}
 	}
+}
+
+func AllocatedHeapMemory() runtime.MemStats {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return m
 }

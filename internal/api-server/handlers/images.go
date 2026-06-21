@@ -40,21 +40,22 @@ func (h *Handlers) SaveHandler() http.HandlerFunc {
 				defer wg.Done()
 
 				j := &domain.Job{
-					ID:        ulid.Make().String(),
-					From:      host,
-					ImageUUID: uuid.NewString(),
+					ID:   ulid.Make().String(),
+					From: host,
 				}
 
 				img := h.fetchFunc()
+				img.UUID = uuid.NewString()
+				defer func() { img.Data = nil }()
 
-				pathToFile, err := h.saveFunc(j, img)
+				pathToFile, err := h.ifs.SaveImage(img)
 				if err != nil {
-					h.logger.Error("Save error", "error", err)
+					h.logger.Error("Save error", "error", err, "job", j.ID)
 					return
 				}
 
 				if h.fmdr != nil {
-					if err := h.fmdr.SaveRecord(j, img, pathToFile); err != nil {
+					if err := h.fmdr.SaveRecord(r.Context(), j.From, img, pathToFile); err != nil {
 						h.logger.Error("Metadata save error", "path", pathToFile, "error", err)
 						return
 					}
@@ -74,7 +75,7 @@ func (h *Handlers) ServeFile() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("id")
 
-		file, err := h.fmdr.GetByID(id)
+		file, err := h.fmdr.GetByID(r.Context(), id)
 		if err != nil {
 			http.NotFound(w, r)
 			return

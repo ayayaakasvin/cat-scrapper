@@ -1,6 +1,6 @@
 // Package provides ready functions which will simplify action of fetching and saving images of cat via libs
 // github.com/ayayaakasvin/cat-photo-fetch
-package saveengine
+package fsengine
 
 import (
 	"fmt"
@@ -13,12 +13,13 @@ import (
 	"github.com/ayayaakasvin/cat-scrapper/internal/domain"
 )
 
-type SaveEngine struct {
+type FSEngine struct {
 	savePath string
 	sem      chan struct{}
+	dem      chan struct{}
 }
 
-func NewSaveEngine(savePath string) (domain.Engine, error) {
+func NewFSE(savePath string) (domain.ImageFileSystem, error) {
 	if savePath == "" {
 		exePath, err := os.Executable()
 		if err != nil {
@@ -33,15 +34,16 @@ func NewSaveEngine(savePath string) (domain.Engine, error) {
 		return nil, fmt.Errorf("failed to init SaveEngine: %w", err)
 	}
 
-	return &SaveEngine{
+	return &FSEngine{
 		savePath: savePath,
 		sem:      make(chan struct{}, 8),
+		dem:      make(chan struct{}, 8),
 	}, nil
 }
 
 // Saves cat image into directory of running program or into savePath.
 // The supplied reader must already contain the image bytes to be written.
-func (e *SaveEngine) SaveImage(uid *domain.Job, img *catphotofetch.Image) (string, error) {
+func (e *FSEngine) SaveImage(img *catphotofetch.Image) (string, error) {
 	e.sem <- struct{}{}
 	defer func() { <-e.sem }()
 	r := img.Reader()
@@ -49,9 +51,10 @@ func (e *SaveEngine) SaveImage(uid *domain.Job, img *catphotofetch.Image) (strin
 	if r == nil {
 		return "", fmt.Errorf("image reader is nil")
 	}
+	defer r.Close()
 
 	ctype := strings.TrimPrefix(img.ContentType, "image/")
-	filename := uid.ImageUUID + "." + ctype
+	filename := img.UUID + "." + ctype
 	fullpath := filepath.Join(e.savePath, filename)
 
 	file, err := os.Create(fullpath)
@@ -65,4 +68,15 @@ func (e *SaveEngine) SaveImage(uid *domain.Job, img *catphotofetch.Image) (strin
 	}
 
 	return fullpath, nil
+}
+
+func (e *FSEngine) DeleteImage(fmd *domain.FileMetaData) error {
+	e.dem <- struct{}{}
+	defer func() { <-e.dem }()
+
+	if err := os.Remove(fmd.Filepath); err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -22,6 +22,7 @@ type Config struct {
 	CorsConfig       `yaml:"cors"`
 	Logger           LoggerConfig `yaml:"logger"`
 	SavePath         string       `yaml:"save_path"`
+	SqLiteConfig     string       `yaml:"db"`
 }
 
 type LoggerConfig struct {
@@ -45,9 +46,9 @@ type CorsConfig struct {
 }
 
 type HTTPServerConfig struct {
-	Address     string        `yaml:"address"						env-default:"localhost:8080"`
-	Timeout     time.Duration `yaml:"timeout" 															env-required:"true"`
-	IdleTimeout time.Duration `yaml:"idle_timeout" 														env-required:"true"`
+	Address     string        `yaml:"address" env-default:"localhost:8080"`
+	Timeout     time.Duration `yaml:"timeout" env-required:"true"`
+	IdleTimeout time.Duration `yaml:"idle_timeout" env-required:"true"`
 }
 
 // MustLoadConfig loads the configuration from the specified path

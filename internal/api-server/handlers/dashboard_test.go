@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,11 +17,11 @@ type stubRepo struct {
 	err     error
 }
 
-func (s stubRepo) GetAllRecords() ([]*domain.FileMetaData, error) {
+func (s stubRepo) GetAllRecords(context.Context,) ([]*domain.FileMetaData, error) {
 	return s.records, s.err
 }
 
-func (s stubRepo) GetAllIDs() ([]string, error) {
+func (s stubRepo) GetAllIDs(context.Context,) ([]string, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -28,18 +29,22 @@ func (s stubRepo) GetAllIDs() ([]string, error) {
 	ids := make([]string, 0, len(s.records))
 	for _, r := range s.records {
 		if r != nil {
-			ids = append(ids, r.ID)
+			ids = append(ids, r.UUID)
 		}
 	}
 	return ids, nil
 }
 
-func (s stubRepo) SaveRecord(*domain.Job, *catphotofetch.Image, string) error {
+func (s stubRepo) SaveRecord(context.Context, string, *catphotofetch.Image, string) error {
 	return nil
 }
 
-func (s stubRepo) GetByID(id string) (*domain.FileMetaData, error) {
+func (s stubRepo) GetByID(context.Context, string) (*domain.FileMetaData, error) {
 	return nil, nil
+}
+
+func (s stubRepo) DeleteRecord(context.Context, string) error {
+	return nil
 }
 
 func (s stubRepo) Close() error {

@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -12,7 +11,14 @@ import (
 func (m *Middlewares) LoggerMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		reqID := uuid.New().String()
-		m.logger.Info(requestInfo(r, reqID))
+		m.logger.Info("[START]",
+			slog.String("ReqID", reqID),
+			slog.String("Method", r.Method),
+			slog.String("URL", r.URL.String()),
+			slog.String("RemoteAddr", r.RemoteAddr),
+			slog.String("UserAgent", r.UserAgent()),
+			slog.Any("Headers", r.Header),
+		)
 		start := time.Now()
 		rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
@@ -31,21 +37,9 @@ func (m *Middlewares) LoggerMiddleware(next http.HandlerFunc) http.HandlerFunc {
 				slog.String("Result", result),
 			)
 		}()
-	
+
 		next.ServeHTTP(rw, r)
 	}
-}
-
-func requestInfo(r *http.Request, reqID string) string {
-	return fmt.Sprintf(
-		"[START]\n\tReqID=%s\n\tMethod=%s\n\tURL=%s\n\tRemoteAddr=%s\n\tUserAgent=%s\n\tHeaders=%v\n",
-		reqID,
-		r.Method,
-		r.URL.String(),
-		r.RemoteAddr,
-		r.UserAgent(),
-		r.Header,
-	)
 }
 
 // rw implementation for tracking if request was handled successfully, using bool value rw.finished and assigning true if WriteHeader was called.
@@ -57,7 +51,21 @@ type responseWriter struct {
 }
 
 func (rw *responseWriter) WriteHeader(code int) {
+	if rw.finished {
+		return
+	}
+
 	rw.statusCode = code
 	rw.finished = true
 	rw.ResponseWriter.WriteHeader(code)
+}
+
+func (rw *responseWriter) Write(b []byte) (int, error) {
+	if !rw.finished {
+		rw.statusCode = http.StatusOK
+		rw.finished = true
+		rw.ResponseWriter.WriteHeader(http.StatusOK)
+	}
+
+	return rw.ResponseWriter.Write(b)
 }

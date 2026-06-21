@@ -12,10 +12,11 @@ import (
 
 	imagepool "github.com/ayayaakasvin/cat-photo-fetch/image-pool"
 	apiserver "github.com/ayayaakasvin/cat-scrapper/internal/api-server"
-	"github.com/ayayaakasvin/cat-scrapper/internal/api-server/libs/aliveapp"
+	"github.com/ayayaakasvin/cat-scrapper/internal/api-server/libs/appstat"
 	"github.com/ayayaakasvin/cat-scrapper/internal/config"
+	fsengine "github.com/ayayaakasvin/cat-scrapper/internal/fs_engine"
 	"github.com/ayayaakasvin/cat-scrapper/internal/repository/sqlite"
-	saveengine "github.com/ayayaakasvin/cat-scrapper/internal/save-engine"
+
 	"github.com/ayayaakasvin/cat-scrapper/pkg/logger"
 	"github.com/ayayaakasvin/goroutinesupervisor"
 )
@@ -36,7 +37,7 @@ func run() error {
 
 	log.Info("config", "env", cfg.Logger.Env)
 
-	sg, err := saveengine.NewSaveEngine(cfg.SavePath)
+	sg, err := fsengine.NewFSE(cfg.SavePath)
 	if err != nil {
 		return fmt.Errorf("init save engine error: %w", err)
 	}
@@ -46,7 +47,7 @@ func run() error {
 		return fmt.Errorf("init image pool error: %w", err)
 	}
 
-	repo, err := sqlite.NewSqliteConnection(filepath.Join(cfg.SavePath, "images.db"))
+	repo, err := sqlite.NewSqliteConnection(filepath.Join(cfg.SavePath, cfg.SqLiteConfig))
 	if err != nil {
 		return fmt.Errorf("init repository error: %w", err)
 	}
@@ -62,8 +63,8 @@ func run() error {
 		pool,
 	)
 
-	gs.Go("Server Status", aliveapp.LogAppStatus(time.Minute*3, log, ctx))
-	gs.Go("Memory Stats", aliveapp.MemStat(time.Minute*3, log, ctx))
+	gs.Go("Server Status", appstat.LogAppStatus(time.Minute*3, log, ctx))
+	gs.Go("Memory Stats", appstat.MemStat(time.Minute*3, log, ctx))
 	gs.Go("http-server", app.Start)
 
 	err = gs.Wait()

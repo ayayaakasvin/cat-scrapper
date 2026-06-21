@@ -5,14 +5,12 @@ import (
 	"testing"
 
 	catphotofetch "github.com/ayayaakasvin/cat-photo-fetch"
-	"github.com/ayayaakasvin/cat-scrapper/internal/domain"
 )
 
 func TestBuildSaveRecordMetadataUsesActualFilePath(t *testing.T) {
-	job := &domain.Job{ID: "job-1", From: "example.com", ImageUUID: "image-uuid"}
-	img := &catphotofetch.Image{ContentType: "image/png", Data: []byte("abc")}
+	img := &catphotofetch.Image{ContentType: "image/png", Data: []byte("abc"), UUID: "image-uuid"}
 
-	filename, extension, mimeType, sizeBytes, err := buildSaveRecordMetadata(job, img, "/tmp/uploads/image-uuid.png")
+	filename, extension, mimeType, sizeBytes, err := buildSaveRecordMetadata(img, "/tmp/uploads/image-uuid.png")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -56,7 +54,7 @@ func TestGetAllIDsReturnsAllImageUUIDs(t *testing.T) {
 		t.Fatalf("failed to insert second record: %v", err)
 	}
 
-	ids, err := sqliteRepo.GetAllIDs()
+	ids, err := sqliteRepo.GetAllIDs(t.Context())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

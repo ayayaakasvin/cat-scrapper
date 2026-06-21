@@ -20,7 +20,7 @@ type ApiServer struct {
 	lmux    *lightmux.LightMux
 
 	pool *imagepool.CatImagePool
-	sg   domain.Engine
+	sg   domain.ImageFileSystem
 	fmdr domain.FileMetaDataRepository
 
 	logger *slog.Logger
@@ -30,7 +30,7 @@ func NewApiServer(
 	httpcfg *config.HTTPServerConfig,
 	corscfg *config.CorsConfig,
 	logger *slog.Logger,
-	sg domain.Engine,
+	sg domain.ImageFileSystem,
 	fmdr domain.FileMetaDataRepository,
 	pool *imagepool.CatImagePool,
 ) *ApiServer {
@@ -78,7 +78,7 @@ func (s *ApiServer) setupLightMux() {
 	s.lmux = lightmux.NewLightMux(s.server)
 
 	mws := middlewares.NewHTTPMiddlewares(s.logger, s.corscfg)
-	hndlrs := handlers.NewHTTPHandlers(s.logger, s.fmdr, s.pool.Get, s.sg.SaveImage)
+	hndlrs := handlers.NewHTTPHandlers(s.logger, s.fmdr, s.pool.Get, s.sg)
 
 	s.lmux.Use(mws.RecoverMiddleware, mws.LoggerMiddleware, mws.CORSMiddleware)
 
@@ -88,6 +88,8 @@ func (s *ApiServer) setupLightMux() {
 	apiGroup.NewRoute("/images").Handle(http.MethodPost, hndlrs.SaveHandler())
 	apiGroup.NewRoute("/dashboard").Handle(http.MethodGet, hndlrs.DashboardHandler())
 	apiGroup.NewRoute("/dashboard/list").Handle(http.MethodGet, hndlrs.DashboardListHandler())
+	apiGroup.NewRoute("/dashboard/nuke").Handle(http.MethodDelete, hndlrs.NukeHandler())
+	apiGroup.NewRoute("/dashboard/appstat").Handle(http.MethodGet, hndlrs.DashboardAppStatHandler())
 	apiGroup.NewRoute("/files").Handle(http.MethodGet, hndlrs.ServeFile())
 
 	s.logger.Info("LightMux has been set up")

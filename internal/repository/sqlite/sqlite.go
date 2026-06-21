@@ -18,6 +18,17 @@ type SqLite struct {
 	db *sql.DB
 }
 
+// DeleteRecord implements [domain.FileMetaDataRepository].
+func (s *SqLite) DeleteRecord(ctx context.Context, id string) error {
+	if s == nil || s.db == nil {
+		return errors.New("sqlite connection is not initialized")
+	}
+
+	query := "DELETE FROM images WHERE id = ?"
+	_, err := s.db.ExecContext(ctx, query, id)
+	return err
+}
+
 func (s *SqLite) Close() error {
 	if s == nil || s.db == nil {
 		return nil
@@ -26,13 +37,13 @@ func (s *SqLite) Close() error {
 }
 
 // GetByID implements [domain.FileMetaDataRepository]. Checks if such track exists, in order to prevent accessing non existing file
-func (s *SqLite) GetByID(id string) (fp *domain.FileMetaData, err error) {
+func (s *SqLite) GetByID(ctx context.Context, id string) (fp *domain.FileMetaData, err error) {
 	if s == nil || s.db == nil {
 		return nil, errors.New("sqlite connection is not initialized")
 	}
 
 	query := "SELECT id, filename, filepath, extension, mime_type, size_bytes, width, height, created_at FROM images WHERE id = ? LIMIT 1"
-	row := s.db.QueryRowContext(context.Background(), query, id)
+	row := s.db.QueryRowContext(ctx, query, id)
 
 	var (
 		rowID     sql.NullString
@@ -51,7 +62,7 @@ func (s *SqLite) GetByID(id string) (fp *domain.FileMetaData, err error) {
 	}
 
 	return &domain.FileMetaData{
-		ID:        rowID.String,
+		UUID:      rowID.String,
 		Filename:  filename.String,
 		Filepath:  filepath.String,
 		Extension: extension.String,
@@ -64,13 +75,13 @@ func (s *SqLite) GetByID(id string) (fp *domain.FileMetaData, err error) {
 }
 
 // GetAllRecords implements [domain.FileMetaDataRepository]. Gets all records and returns slice
-func (s *SqLite) GetAllRecords() ([]*domain.FileMetaData, error) {
+func (s *SqLite) GetAllRecords(ctx context.Context) ([]*domain.FileMetaData, error) {
 	if s == nil || s.db == nil {
 		return nil, errors.New("sqlite connection is not initialized")
 	}
 
 	query := "SELECT id, filename, filepath, extension, mime_type, size_bytes, width, height, created_at FROM images"
-	rows, err := s.db.QueryContext(context.Background(), query)
+	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +106,7 @@ func (s *SqLite) GetAllRecords() ([]*domain.FileMetaData, error) {
 		}
 
 		results = append(results, &domain.FileMetaData{
-			ID:        rowID.String,
+			UUID:      rowID.String,
 			Filename:  filename.String,
 			Filepath:  filepath.String,
 			Extension: extension.String,
@@ -114,13 +125,13 @@ func (s *SqLite) GetAllRecords() ([]*domain.FileMetaData, error) {
 	return results, nil
 }
 
-func (s *SqLite) GetAllIDs() ([]string, error) {
+func (s *SqLite) GetAllIDs(ctx context.Context) ([]string, error) {
 	if s == nil || s.db == nil {
 		return nil, errors.New("sqlite connection is not initialized")
 	}
 
 	query := "SELECT id FROM images"
-	rows, err := s.db.QueryContext(context.Background(), query)
+	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -145,25 +156,22 @@ func (s *SqLite) GetAllIDs() ([]string, error) {
 }
 
 // SaveRecord implements [domain.FileMetaDataRepository]. Saves record
-func (s *SqLite) SaveRecord(job *domain.Job, img *catphotofetch.Image, filePath string) error {
+func (s *SqLite) SaveRecord(ctx context.Context, from string, img *catphotofetch.Image, filePath string) error {
 	if s == nil || s.db == nil {
 		return errors.New("sqlite connection is not initialized")
-	}
-	if job == nil {
-		return errors.New("job is nil")
 	}
 	if img == nil {
 		return errors.New("image is nil")
 	}
 
-	filename, extension, mimeType, sizeBytes, err := buildSaveRecordMetadata(job, img, filePath)
+	filename, extension, mimeType, sizeBytes, err := buildSaveRecordMetadata(img, filePath)
 	if err != nil {
 		return err
 	}
 
 	query := "INSERT INTO images (id, filename, filepath, extension, mime_type, size_bytes, width, height, `from`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	_, err = s.db.ExecContext(context.Background(), query,
-		job.ImageUUID,
+		img.UUID,
 		filename,
 		filePath,
 		extension,
@@ -171,16 +179,13 @@ func (s *SqLite) SaveRecord(job *domain.Job, img *catphotofetch.Image, filePath 
 		sizeBytes,
 		0,
 		0,
-		job.From,
+		from,
 	)
 
 	return err
 }
 
-func buildSaveRecordMetadata(job *domain.Job, img *catphotofetch.Image, filePath string) (string, string, string, int64, error) {
-	if job == nil {
-		return "", "", "", 0, errors.New("job is nil")
-	}
+func buildSaveRecordMetadata(img *catphotofetch.Image, filePath string) (string, string, string, int64, error) {
 	if img == nil {
 		return "", "", "", 0, errors.New("image is nil")
 	}
@@ -266,5 +271,3 @@ func NewSqliteConnection(dbPath string) (domain.FileMetaDataRepository, error) {
 
 	return &SqLite{db: db}, nil
 }
-
-// TODO:finish sqlite implementation and bind handler with main mux

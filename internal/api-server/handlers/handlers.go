@@ -16,12 +16,13 @@ type Handlers struct {
 	fmdr domain.FileMetaDataRepository
 
 	fetchFunc func() *catphotofetch.Image
-	saveFunc  func(*domain.Job, *catphotofetch.Image) (string, error)
+
+	ifs domain.ImageFileSystem
 
 	dashboardTmpl *template.Template
 }
 
-func NewHTTPHandlers(logger *slog.Logger, fmdr domain.FileMetaDataRepository, fetch func() *catphotofetch.Image, save func(*domain.Job, *catphotofetch.Image) (string, error)) *Handlers {
+func NewHTTPHandlers(logger *slog.Logger, fmdr domain.FileMetaDataRepository, fetch func() *catphotofetch.Image, ifs domain.ImageFileSystem) *Handlers {
 	dashboardHTMLFilePath := filepath.Join(".", "static", "dashboard.html")
 	tmpl, err := template.ParseFiles(dashboardHTMLFilePath)
 	if err != nil {
@@ -35,7 +36,7 @@ func NewHTTPHandlers(logger *slog.Logger, fmdr domain.FileMetaDataRepository, fe
 		logger:        logger,
 		fmdr:          fmdr,
 		fetchFunc:     fetch,
-		saveFunc:      save,
 		dashboardTmpl: tmpl,
+		ifs:           ifs,
 	}
 }

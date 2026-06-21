@@ -3,7 +3,7 @@ package domain
 import "time"
 
 type FileMetaData struct {
-	ID string
+	UUID string
 
 	Filename string
 	Filepath string
