@@ -1,12 +1,11 @@
 package handlers
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"net/http"
-	"sync"
 
-	"github.com/ayayaakasvin/cat-scrapper/internal/domain"
+	"github.com/ayayaakasvin/wpn"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -24,55 +23,31 @@ func (h *Handlers) NukeHandler() http.HandlerFunc {
 			return
 		}
 
-		host := r.Host
-		resp := make(map[string]string)
-		var mu sync.Mutex
-		wg := sync.WaitGroup{}
+		w.WriteHeader(http.StatusAccepted)
 
 		for _, record := range records {
 			rec := record
-			wg.Add(1)
 
-			go func() {
-				defer wg.Done()
-
-				j := &domain.Job{
-					ID:   ulid.Make().String(),
-					From: host,
-				}
-
-				err := h.ifs.DeleteImage(rec)
-				if err != nil {
-					mu.Lock()
-					resp[rec.UUID] = err.Error()
-					mu.Unlock()
-					h.logger.Error("failed to delete image", "job", j.ID, "image", rec.UUID, "from", j.From, "err", err)
-					return
-				}
-
-				if h.fmdr != nil {
-					if err := h.fmdr.DeleteRecord(r.Context(), rec.UUID); err != nil {
-						mu.Lock()
-						resp[rec.UUID] = fmt.Sprintf("file deleted, metadata delete failed: %v", err)
-						mu.Unlock()
-						h.logger.Error("failed to delete metadata record", "job", j.ID, "image", rec.UUID, "from", j.From, "err", err)
-						return
+			j := &wpn.Job{
+				ID:      ulid.Make().String(),
+				Context: r.Context(),
+				Exec: func(ctx context.Context) error {
+					err := h.ifs.DeleteImage(rec)
+					if err != nil {
+						return fmt.Errorf("failed to delete image: %v", err)
 					}
-				}
 
-				mu.Lock()
-				resp[rec.UUID] = "successfully deleted"
-				mu.Unlock()
-			}()
-		}
+					if h.fmdr != nil {
+						if err := h.fmdr.DeleteRecord(rec.UUID); err != nil {
+							return fmt.Errorf("file deleted, metadata delete failed: %v", err)
+						}
+					}
 
-		wg.Wait()
+					return nil
+				},
+			}
 
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			http.Error(w, "failed to encode dashboard list", http.StatusInternalServerError)
-			h.logger.Error("json encode error", "err", err.Error())
-			return
+			h.sfn.Submit(j.Exec, r.Context())
 		}
 	}
 }

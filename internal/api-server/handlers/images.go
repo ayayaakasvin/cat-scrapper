@@ -1,15 +1,14 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"io"
-	"net/http"
-	"sync"
-
-	"github.com/ayayaakasvin/cat-scrapper/internal/domain"
+	"github.com/ayayaakasvin/wpn"
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
+	"io"
+	"net/http"
 )
 
 func (h *Handlers) SaveHandler() http.HandlerFunc {
@@ -29,45 +28,35 @@ func (h *Handlers) SaveHandler() http.HandlerFunc {
 			count = *req.Count
 		}
 
-		host := r.Host
-
-		wg := sync.WaitGroup{}
-
+		w.WriteHeader(http.StatusAccepted)
+		
 		for i := 0; i < count; i++ {
-			wg.Add(1)
+			j := &wpn.Job{
+				ID:      ulid.Make().String(),
+				Context: r.Context(),
+				Exec: func(ctx context.Context) error {
+					img := h.fetchFunc()
+					img.UUID = uuid.NewString()
+					defer func() { img.Data = nil }()
 
-			go func() {
-				defer wg.Done()
-
-				j := &domain.Job{
-					ID:   ulid.Make().String(),
-					From: host,
-				}
-
-				img := h.fetchFunc()
-				img.UUID = uuid.NewString()
-				defer func() { img.Data = nil }()
-
-				pathToFile, err := h.ifs.SaveImage(img)
-				if err != nil {
-					h.logger.Error("Save error", "error", err, "job", j.ID)
-					return
-				}
-
-				if h.fmdr != nil {
-					if err := h.fmdr.SaveRecord(r.Context(), j.From, img, pathToFile); err != nil {
-						h.logger.Error("Metadata save error", "path", pathToFile, "error", err)
-						return
+					pathToFile, err := h.ifs.SaveImage(img)
+					if err != nil {
+						return err
 					}
-				}
 
-				h.logger.Info("File saved", "path", pathToFile)
-			}()
+					if h.fmdr != nil {
+						if err := h.fmdr.SaveRecord(r.Context(), r.Host, img, pathToFile); err != nil {
+							return err
+						}
+					}
+
+					return nil
+				},
+			}
+
+			h.sfn.Submit(j.Exec, r.Context())
+
 		}
-
-		wg.Wait()
-
-		w.WriteHeader(http.StatusOK)
 	}
 }
 

@@ -14,9 +14,7 @@ import (
 )
 
 type FSEngine struct {
-	savePath string
-	sem      chan struct{}
-	dem      chan struct{}
+	savePath  string
 }
 
 func NewFSE(savePath string) (domain.ImageFileSystem, error) {
@@ -35,17 +33,13 @@ func NewFSE(savePath string) (domain.ImageFileSystem, error) {
 	}
 
 	return &FSEngine{
-		savePath: savePath,
-		sem:      make(chan struct{}, 8),
-		dem:      make(chan struct{}, 8),
+		savePath:  savePath,
 	}, nil
 }
 
 // Saves cat image into directory of running program or into savePath.
 // The supplied reader must already contain the image bytes to be written.
 func (e *FSEngine) SaveImage(img *catphotofetch.Image) (string, error) {
-	e.sem <- struct{}{}
-	defer func() { <-e.sem }()
 	r := img.Reader()
 
 	if r == nil {
@@ -71,9 +65,6 @@ func (e *FSEngine) SaveImage(img *catphotofetch.Image) (string, error) {
 }
 
 func (e *FSEngine) DeleteImage(fmd *domain.FileMetaData) error {
-	e.dem <- struct{}{}
-	defer func() { <-e.dem }()
-
 	if err := os.Remove(fmd.Filepath); err != nil {
 		return err
 	}

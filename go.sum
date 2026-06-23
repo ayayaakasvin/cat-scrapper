@@ -6,6 +6,12 @@ github.com/ayayaakasvin/goroutinesupervisor v0.0.0-20260224181310-03934b8f9a56 h
 github.com/ayayaakasvin/goroutinesupervisor v0.0.0-20260224181310-03934b8f9a56/go.mod h1:iPoI2jYW5fa1t6oAvtAaAHE3KbkMaTKMuTB7Z3xnZfE=
 github.com/ayayaakasvin/lightmux v0.0.0-20260223204356-7c1b256c39bc h1:VjgwnpYW3DfCYF/W/+lQgKeRjxS9IdLU5v8Xqp/6pQs=
 github.com/ayayaakasvin/lightmux v0.0.0-20260223204356-7c1b256c39bc/go.mod h1:3pa++t0+AzSuWRrBX3XWvufEtBxFUwMopYyMPJe8Tdo=
+github.com/ayayaakasvin/wpn v0.0.0-20260622141940-2fb9ac463444 h1:H25LxqQ28rnFCk3TBNotk0TIzEKyaYdH0FneROqdp+g=
+github.com/ayayaakasvin/wpn v0.0.0-20260622141940-2fb9ac463444/go.mod h1:JBZ1ohV+VpSYRs5mTFt3FBvADM4Xy5CB1qZaz+5QdWE=
+github.com/ayayaakasvin/wpn v0.0.0-20260623060040-4e694325bc1f h1:ePQytdiJ3tdsLGSPhilGrVc+N3VO8YSmPjtbW5DiXIA=
+github.com/ayayaakasvin/wpn v0.0.0-20260623060040-4e694325bc1f/go.mod h1:JBZ1ohV+VpSYRs5mTFt3FBvADM4Xy5CB1qZaz+5QdWE=
+github.com/ayayaakasvin/wpn v0.0.0-20260623094032-7f0c3ad24856 h1:UV7NmhO69Lh3HcWTcF96jqOeJ1vQ63P46HJtptXYbWw=
+github.com/ayayaakasvin/wpn v0.0.0-20260623094032-7f0c3ad24856/go.mod h1:JBZ1ohV+VpSYRs5mTFt3FBvADM4Xy5CB1qZaz+5QdWE=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=

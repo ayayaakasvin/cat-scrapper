@@ -43,7 +43,7 @@ func (s stubRepo) GetByID(context.Context, string) (*domain.FileMetaData, error)
 	return nil, nil
 }
 
-func (s stubRepo) DeleteRecord(context.Context, string) error {
+func (s stubRepo) DeleteRecord(string) error {
 	return nil
 }
 

@@ -26,3 +26,4 @@ func New(cfg config.LoggerConfig) *slog.Logger {
 
 	return logger
 }
+

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -16,6 +17,8 @@ import (
 	"github.com/ayayaakasvin/cat-scrapper/internal/config"
 	fsengine "github.com/ayayaakasvin/cat-scrapper/internal/fs_engine"
 	"github.com/ayayaakasvin/cat-scrapper/internal/repository/sqlite"
+	"github.com/ayayaakasvin/cat-scrapper/internal/wplog"
+	"github.com/ayayaakasvin/wpn"
 
 	"github.com/ayayaakasvin/cat-scrapper/pkg/logger"
 	"github.com/ayayaakasvin/goroutinesupervisor"
@@ -46,6 +49,10 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("init image pool error: %w", err)
 	}
+	wp, err := wpn.NewWorkerPool(runtime.NumCPU() * 2)
+	if err != nil {
+		return fmt.Errorf("worker pool init error: %s", err)
+	}
 
 	repo, err := sqlite.NewSqliteConnection(filepath.Join(cfg.SavePath, cfg.SqLiteConfig))
 	if err != nil {
@@ -61,10 +68,13 @@ func run() error {
 		sg,
 		repo,
 		pool,
+		wp,
 	)
 
 	gs.Go("Server Status", appstat.LogAppStatus(time.Minute*3, log, ctx))
 	gs.Go("Memory Stats", appstat.MemStat(time.Minute*3, log, ctx))
+	gs.Go("Worker Pool", wp.Start)
+	gs.Go("Worker Pool Logger", wplog.WorkerPoolResultLogger(wp.Results(), log))
 	gs.Go("http-server", app.Start)
 
 	err = gs.Wait()

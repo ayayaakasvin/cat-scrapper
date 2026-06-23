@@ -11,6 +11,7 @@ import (
 	"github.com/ayayaakasvin/cat-scrapper/internal/config"
 	"github.com/ayayaakasvin/cat-scrapper/internal/domain"
 	"github.com/ayayaakasvin/lightmux"
+	"github.com/ayayaakasvin/wpn"
 )
 
 type ApiServer struct {
@@ -22,6 +23,7 @@ type ApiServer struct {
 	pool *imagepool.CatImagePool
 	sg   domain.ImageFileSystem
 	fmdr domain.FileMetaDataRepository
+	sfn  wpn.Sumbitter
 
 	logger *slog.Logger
 }
@@ -33,6 +35,7 @@ func NewApiServer(
 	sg domain.ImageFileSystem,
 	fmdr domain.FileMetaDataRepository,
 	pool *imagepool.CatImagePool,
+	sfn wpn.Sumbitter,
 ) *ApiServer {
 	return &ApiServer{
 		httpcfg: httpcfg,
@@ -41,6 +44,7 @@ func NewApiServer(
 		sg:      sg,
 		fmdr:    fmdr,
 		pool:    pool,
+		sfn:     sfn,
 	}
 }
 
@@ -78,7 +82,7 @@ func (s *ApiServer) setupLightMux() {
 	s.lmux = lightmux.NewLightMux(s.server)
 
 	mws := middlewares.NewHTTPMiddlewares(s.logger, s.corscfg)
-	hndlrs := handlers.NewHTTPHandlers(s.logger, s.fmdr, s.pool.Get, s.sg)
+	hndlrs := handlers.NewHTTPHandlers(s.logger, s.fmdr, s.pool.Get, s.sg, s.sfn)
 
 	s.lmux.Use(mws.RecoverMiddleware, mws.LoggerMiddleware, mws.CORSMiddleware)
 

@@ -15,9 +15,9 @@ func (m *Middlewares) LoggerMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			slog.String("ReqID", reqID),
 			slog.String("Method", r.Method),
 			slog.String("URL", r.URL.String()),
-			slog.String("RemoteAddr", r.RemoteAddr),
-			slog.String("UserAgent", r.UserAgent()),
-			slog.Any("Headers", r.Header),
+			// slog.String("RemoteAddr", r.RemoteAddr),
+			// slog.String("UserAgent", r.UserAgent()),
+			// slog.Any("Headers", r.Header),
 		)
 		start := time.Now()
 		rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}

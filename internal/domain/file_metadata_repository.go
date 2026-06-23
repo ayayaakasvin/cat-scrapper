@@ -11,7 +11,7 @@ type FileMetaDataRepository interface {
 	GetAllIDs(context.Context) ([]string, error)
 	SaveRecord(context.Context, string, *catphotofetch.Image, string) error
 	GetByID(context.Context, string) (fp *FileMetaData, err error)
-	DeleteRecord(context.Context, string) error
+	DeleteRecord(string) error
 
 	Close() error
 }

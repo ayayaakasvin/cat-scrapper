@@ -12,6 +12,7 @@ require (
 )
 
 require (
+	github.com/ayayaakasvin/wpn v0.0.0-20260623094032-7f0c3ad24856
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

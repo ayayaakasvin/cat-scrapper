@@ -19,13 +19,13 @@ type SqLite struct {
 }
 
 // DeleteRecord implements [domain.FileMetaDataRepository].
-func (s *SqLite) DeleteRecord(ctx context.Context, id string) error {
+func (s *SqLite) DeleteRecord(id string) error {
 	if s == nil || s.db == nil {
 		return errors.New("sqlite connection is not initialized")
 	}
 
 	query := "DELETE FROM images WHERE id = ?"
-	_, err := s.db.ExecContext(ctx, query, id)
+	_, err := s.db.Exec(query, id)
 	return err
 }
 
