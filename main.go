@@ -54,7 +54,7 @@ func run() error {
 		return fmt.Errorf("worker pool init error: %s", err)
 	}
 
-	repo, err := sqlite.NewSqliteConnection(filepath.Join(cfg.SavePath, cfg.SqLiteConfig))
+	repo, err := sqlite.NewSqliteConnection(filepath.Join(cfg.SavePath, cfg.SqLiteConfig.FilePath))
 	if err != nil {
 		return fmt.Errorf("init repository error: %w", err)
 	}

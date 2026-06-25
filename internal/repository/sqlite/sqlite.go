@@ -18,6 +18,96 @@ type SqLite struct {
 	db *sql.DB
 }
 
+func NewSqliteConnection(dbPath string) (domain.FileMetaDataRepository, error) {
+	if dbPath == "" {
+		dbPath = "cat-scrapper.db"
+	}
+
+	dbPath, err := normalizeSqliteDBPath(dbPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if dir := filepath.Dir(dbPath); dir != "." && dir != "" {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return nil, fmt.Errorf("failed to create sqlite directory %s: %w", dir, err)
+		}
+	}
+
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open sqlite db %s: %w", dbPath, err)
+	}
+
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	db.SetConnMaxLifetime(0)
+
+	if _, err := db.ExecContext(context.Background(), "PRAGMA busy_timeout = 5000"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to set sqlite busy timeout: %w", err)
+	}
+
+	if _, err := db.ExecContext(context.Background(), "PRAGMA journal_mode = WAL"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to set sqlite journal mode: %w", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to ping sqlite db %s: %w", dbPath, err)
+	}
+
+	createTable := `CREATE TABLE IF NOT EXISTS images (
+		id TEXT PRIMARY KEY,
+		filename TEXT NOT NULL,
+		filepath TEXT NOT NULL UNIQUE,
+		extension TEXT,
+		mime_type TEXT,
+		size_bytes INTEGER NOT NULL,
+		width INTEGER,
+		height INTEGER,
+		"from" TEXT,
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	)`
+
+	if _, err := db.ExecContext(context.Background(), createTable); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to initialize sqlite schema: %w", err)
+	}
+
+	return &SqLite{db: db}, nil
+}
+
+func normalizeSqliteDBPath(dbPath string) (string, error) {
+	if dbPath == "~" || strings.HasPrefix(dbPath, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve home directory: %w", err)
+		}
+		if dbPath == "~" {
+			dbPath = home
+		} else {
+			dbPath = filepath.Join(home, dbPath[2:])
+		}
+	}
+
+	dbPath = filepath.Clean(dbPath)
+	if !filepath.IsAbs(dbPath) {
+		absPath, err := filepath.Abs(dbPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve sqlite db path %s: %w", dbPath, err)
+		}
+		dbPath = absPath
+	}
+
+	return dbPath, nil
+}
+
+func (s *SqLite) Stats() sql.DBStats {
+	return s.db.Stats()
+}
+
 // DeleteRecord implements [domain.FileMetaDataRepository].
 func (s *SqLite) DeleteRecord(id string) error {
 	if s == nil || s.db == nil {
@@ -214,60 +304,4 @@ func buildSaveRecordMetadata(img *catphotofetch.Image, filePath string) (string,
 	}
 
 	return filename, extension, mimeType, sizeBytes, nil
-}
-
-func NewSqliteConnection(dbPath string) (domain.FileMetaDataRepository, error) {
-	if dbPath == "" {
-		dbPath = "cat-scrapper.db"
-	}
-
-	if dir := filepath.Dir(dbPath); dir != "." && dir != "" {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return nil, fmt.Errorf("failed to create sqlite directory %s: %w", dir, err)
-		}
-	}
-
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open sqlite db %s: %w", dbPath, err)
-	}
-
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
-	db.SetConnMaxLifetime(0)
-
-	if _, err := db.ExecContext(context.Background(), "PRAGMA busy_timeout = 5000"); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to set sqlite busy timeout: %w", err)
-	}
-
-	if _, err := db.ExecContext(context.Background(), "PRAGMA journal_mode = WAL"); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to set sqlite journal mode: %w", err)
-	}
-
-	if err := db.Ping(); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to ping sqlite db %s: %w", dbPath, err)
-	}
-
-	createTable := `CREATE TABLE IF NOT EXISTS images (
-		id TEXT PRIMARY KEY,
-		filename TEXT NOT NULL,
-		filepath TEXT NOT NULL UNIQUE,
-		extension TEXT,
-		mime_type TEXT,
-		size_bytes INTEGER NOT NULL,
-		width INTEGER,
-		height INTEGER,
-		"from" TEXT,
-		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-	)`
-
-	if _, err := db.ExecContext(context.Background(), createTable); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to initialize sqlite schema: %w", err)
-	}
-
-	return &SqLite{db: db}, nil
 }

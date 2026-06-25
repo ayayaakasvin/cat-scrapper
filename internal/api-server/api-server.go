@@ -10,8 +10,10 @@ import (
 	"github.com/ayayaakasvin/cat-scrapper/internal/api-server/middlewares"
 	"github.com/ayayaakasvin/cat-scrapper/internal/config"
 	"github.com/ayayaakasvin/cat-scrapper/internal/domain"
+	"github.com/ayayaakasvin/cat-scrapper/internal/metrics"
 	"github.com/ayayaakasvin/lightmux"
 	"github.com/ayayaakasvin/wpn"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type ApiServer struct {
@@ -81,14 +83,17 @@ func (s *ApiServer) setupServer() {
 func (s *ApiServer) setupLightMux() {
 	s.lmux = lightmux.NewLightMux(s.server)
 
+
 	mws := middlewares.NewHTTPMiddlewares(s.logger, s.corscfg)
 	hndlrs := handlers.NewHTTPHandlers(s.logger, s.fmdr, s.pool.Get, s.sg, s.sfn)
+	metrics.Register()
 
-	s.lmux.Use(mws.RecoverMiddleware, mws.LoggerMiddleware, mws.CORSMiddleware)
+	s.lmux.Use(mws.CaptureMiddleware, mws.RecoverMiddleware, mws.MetricsMiddleware, mws.LoggerMiddleware, mws.CORSMiddleware)
 
 	apiGroup := s.lmux.NewGroup("/api")
 
 	apiGroup.NewRoute("/ping").Handle(http.MethodGet, hndlrs.PingHandler())
+	apiGroup.NewRoute("/metrics").Handle(http.MethodGet,promhttp.Handler().ServeHTTP)
 	apiGroup.NewRoute("/images").Handle(http.MethodPost, hndlrs.SaveHandler())
 	apiGroup.NewRoute("/dashboard").Handle(http.MethodGet, hndlrs.DashboardHandler())
 	apiGroup.NewRoute("/dashboard/list").Handle(http.MethodGet, hndlrs.DashboardListHandler())

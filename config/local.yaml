@@ -20,4 +20,5 @@ logger:
   
 save_path: "/mnt/codebase/code/vscode/cat-scrapper/cats"
 
-db: "cats_metadata.db"
+sqlite:
+  db_name: "cats_metadata.db"

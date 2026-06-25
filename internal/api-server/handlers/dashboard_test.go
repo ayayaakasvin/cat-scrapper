@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -45,6 +46,10 @@ func (s stubRepo) GetByID(context.Context, string) (*domain.FileMetaData, error)
 
 func (s stubRepo) DeleteRecord(string) error {
 	return nil
+}
+
+func (s stubRepo) Stats() sql.DBStats {
+	return sql.DBStats{}
 }
 
 func (s stubRepo) Close() error {
