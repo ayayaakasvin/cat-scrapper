@@ -7,14 +7,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
-	catphotofetch "github.com/ayayaakasvin/cat-photo-fetch"
 	"github.com/ayayaakasvin/cat-scrapper/internal/domain"
 )
 
 type FSEngine struct {
-	savePath  string
+	savePath string
 }
 
 func NewFSE(savePath string) (domain.ImageFileSystem, error) {
@@ -33,39 +31,41 @@ func NewFSE(savePath string) (domain.ImageFileSystem, error) {
 	}
 
 	return &FSEngine{
-		savePath:  savePath,
+		savePath: savePath,
 	}, nil
 }
 
 // Saves cat image into directory of running program or into savePath.
 // The supplied reader must already contain the image bytes to be written.
-func (e *FSEngine) SaveImage(img *catphotofetch.Image) (string, error) {
-	r := img.Reader()
-
+func (e *FSEngine) SaveImage(r io.ReadCloser, pathToFile ...string) (string, error) {
 	if r == nil {
 		return "", fmt.Errorf("image reader is nil")
 	}
 	defer r.Close()
+	if len(pathToFile) == 0 {
+		return "", fmt.Errorf("missing file path")
+	}
 
-	ctype := strings.TrimPrefix(img.ContentType, "image/")
-	filename := img.UUID + "." + ctype
-	fullpath := filepath.Join(e.savePath, filename)
+	fullpath := filepath.Join(e.savePath, filepath.Join(pathToFile...))
+	if err := os.MkdirAll(filepath.Dir(fullpath), 0755); err != nil {
+		return "", fmt.Errorf("failed to create directories for %s: %w", fullpath, err)
+	}
 
 	file, err := os.Create(fullpath)
 	if err != nil {
-		return "", fmt.Errorf("failed to create file %s: %w", filename, err)
+		return "", fmt.Errorf("failed to create file %s: %w", fullpath, err)
 	}
 	defer file.Close()
 
 	if _, err := io.Copy(file, r); err != nil {
-		return "", fmt.Errorf("failed to save file %s: %w", filename, err)
+		return "", fmt.Errorf("failed to save file %s: %w", fullpath, err)
 	}
 
 	return fullpath, nil
 }
 
-func (e *FSEngine) DeleteImage(fmd *domain.FileMetaData) error {
-	if err := os.Remove(fmd.Filepath); err != nil {
+func (e *FSEngine) DeleteImage(pathToFile ...string) error {
+	if err := os.Remove(filepath.Join(pathToFile...)); err != nil {
 		return err
 	}
 

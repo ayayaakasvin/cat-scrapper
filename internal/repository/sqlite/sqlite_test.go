@@ -3,31 +3,7 @@ package sqlite
 import (
 	"context"
 	"testing"
-
-	catphotofetch "github.com/ayayaakasvin/cat-photo-fetch"
 )
-
-func TestBuildSaveRecordMetadataUsesActualFilePath(t *testing.T) {
-	img := &catphotofetch.Image{ContentType: "image/png", Data: []byte("abc"), UUID: "image-uuid"}
-
-	filename, extension, mimeType, sizeBytes, err := buildSaveRecordMetadata(img, "/tmp/uploads/image-uuid.png")
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	if filename != "image-uuid.png" {
-		t.Fatalf("expected filename to use the saved file name, got %q", filename)
-	}
-	if extension != "png" {
-		t.Fatalf("expected extension png, got %q", extension)
-	}
-	if mimeType != "image/png" {
-		t.Fatalf("expected mime type image/png, got %q", mimeType)
-	}
-	if sizeBytes != 3 {
-		t.Fatalf("expected size to match the provided data bytes, got %d", sizeBytes)
-	}
-}
 
 func TestGetAllIDsReturnsAllImageUUIDs(t *testing.T) {
 	tmpFile := t.TempDir() + "/test.db"

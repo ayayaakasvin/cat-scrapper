@@ -3,7 +3,6 @@ package sqlite
 import (
 	"context"
 
-	catphotofetch "github.com/ayayaakasvin/cat-photo-fetch"
 	"github.com/ayayaakasvin/cat-scrapper/internal/domain"
 	"github.com/ayayaakasvin/cat-scrapper/internal/metrics"
 )
@@ -40,11 +39,11 @@ func (m *MetricsWrapper) GetAllIDs(ctx context.Context) ([]string, error) {
 	return ids, err
 }
 
-func (m *MetricsWrapper) SaveRecord(ctx context.Context, id string, img *catphotofetch.Image, path string) error {
+func (m *MetricsWrapper) SaveRecord(ctx context.Context, id string, fmd *domain.FileMetaData) error {
 	metrics.ActiveDBConnections.Inc()
 	defer metrics.ActiveDBConnections.Dec()
 
-	err := m.next.SaveRecord(ctx, id, img, path)
+	err := m.next.SaveRecord(ctx, id, fmd)
 	if err == nil {
 		metrics.DBQueries.Inc()
 	}

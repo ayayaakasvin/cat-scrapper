@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	catphotofetch "github.com/ayayaakasvin/cat-photo-fetch"
 	"github.com/ayayaakasvin/cat-scrapper/internal/domain"
 	_ "modernc.org/sqlite"
 )
@@ -62,6 +61,7 @@ func NewSqliteConnection(dbPath string) (domain.FileMetaDataRepository, error) {
 		id TEXT PRIMARY KEY,
 		filename TEXT NOT NULL,
 		filepath TEXT NOT NULL UNIQUE,
+		thumbpath TEXT NOT NULL UNIQUE,
 		extension TEXT,
 		mime_type TEXT,
 		size_bytes INTEGER NOT NULL,
@@ -104,10 +104,6 @@ func normalizeSqliteDBPath(dbPath string) (string, error) {
 	return dbPath, nil
 }
 
-func (s *SqLite) Stats() sql.DBStats {
-	return s.db.Stats()
-}
-
 // DeleteRecord implements [domain.FileMetaDataRepository].
 func (s *SqLite) DeleteRecord(id string) error {
 	if s == nil || s.db == nil {
@@ -132,22 +128,24 @@ func (s *SqLite) GetByID(ctx context.Context, id string) (fp *domain.FileMetaDat
 		return nil, errors.New("sqlite connection is not initialized")
 	}
 
-	query := "SELECT id, filename, filepath, extension, mime_type, size_bytes, width, height, created_at FROM images WHERE id = ? LIMIT 1"
+	query := "SELECT id, filename, filepath, thumbpath, extension, mime_type, size_bytes, width, height, \"from\", created_at FROM images WHERE id = ? LIMIT 1"
 	row := s.db.QueryRowContext(ctx, query, id)
 
 	var (
 		rowID     sql.NullString
 		filename  sql.NullString
 		filepath  sql.NullString
+		thumbpath sql.NullString
 		extension sql.NullString
 		mimeType  sql.NullString
 		sizeBytes sql.NullInt64
 		width     sql.NullInt64
 		height    sql.NullInt64
+		from      sql.NullString
 		createdAt sql.NullTime
 	)
 
-	if err = row.Scan(&rowID, &filename, &filepath, &extension, &mimeType, &sizeBytes, &width, &height, &createdAt); err != nil {
+	if err = row.Scan(&rowID, &filename, &filepath, &thumbpath, &extension, &mimeType, &sizeBytes, &width, &height, &from, &createdAt); err != nil {
 		return nil, err
 	}
 
@@ -155,11 +153,13 @@ func (s *SqLite) GetByID(ctx context.Context, id string) (fp *domain.FileMetaDat
 		UUID:      rowID.String,
 		Filename:  filename.String,
 		Filepath:  filepath.String,
+		Thumbpath: thumbpath.String,
 		Extension: extension.String,
 		MimeType:  mimeType.String,
 		Size:      sizeBytes.Int64,
 		Width:     int(width.Int64),
 		Height:    int(height.Int64),
+		From:      from.String,
 		CreatedAt: createdAt.Time,
 	}, nil
 }
@@ -170,7 +170,7 @@ func (s *SqLite) GetAllRecords(ctx context.Context) ([]*domain.FileMetaData, err
 		return nil, errors.New("sqlite connection is not initialized")
 	}
 
-	query := "SELECT id, filename, filepath, extension, mime_type, size_bytes, width, height, created_at FROM images"
+	query := "SELECT id, filename, filepath, extension, mime_type, size_bytes, width, height, created_at, \"from\" FROM images"
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
@@ -189,9 +189,10 @@ func (s *SqLite) GetAllRecords(ctx context.Context) ([]*domain.FileMetaData, err
 			width     sql.NullInt64
 			height    sql.NullInt64
 			createdAt sql.NullTime
+			from      sql.NullString
 		)
 
-		if err := rows.Scan(&rowID, &filename, &filepath, &extension, &mimeType, &sizeBytes, &width, &height, &createdAt); err != nil {
+		if err := rows.Scan(&rowID, &filename, &filepath, &extension, &mimeType, &sizeBytes, &width, &height, &createdAt, &from); err != nil {
 			return nil, err
 		}
 
@@ -204,6 +205,7 @@ func (s *SqLite) GetAllRecords(ctx context.Context) ([]*domain.FileMetaData, err
 			Size:      sizeBytes.Int64,
 			Width:     int(width.Int64),
 			Height:    int(height.Int64),
+			From:      from.String,
 			CreatedAt: createdAt.Time,
 		})
 	}
@@ -246,62 +248,27 @@ func (s *SqLite) GetAllIDs(ctx context.Context) ([]string, error) {
 }
 
 // SaveRecord implements [domain.FileMetaDataRepository]. Saves record
-func (s *SqLite) SaveRecord(ctx context.Context, from string, img *catphotofetch.Image, filePath string) error {
+func (s *SqLite) SaveRecord(ctx context.Context, from string, fmd *domain.FileMetaData) error {
 	if s == nil || s.db == nil {
 		return errors.New("sqlite connection is not initialized")
 	}
-	if img == nil {
+	if fmd == nil {
 		return errors.New("image is nil")
 	}
 
-	filename, extension, mimeType, sizeBytes, err := buildSaveRecordMetadata(img, filePath)
-	if err != nil {
-		return err
-	}
-
-	query := "INSERT INTO images (id, filename, filepath, extension, mime_type, size_bytes, width, height, `from`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	_, err = s.db.ExecContext(context.Background(), query,
-		img.UUID,
-		filename,
-		filePath,
-		extension,
-		mimeType,
-		sizeBytes,
-		0,
-		0,
+	query := "INSERT INTO images (id, filename, filepath, thumbpath, extension, mime_type, size_bytes, width, height, `from`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	_, err := s.db.ExecContext(ctx, query,
+		fmd.UUID,
+		fmd.Filename,
+		fmd.Filepath,
+		fmd.Thumbpath,
+		fmd.Extension,
+		fmd.MimeType,
+		fmd.Size,
+		fmd.Width,
+		fmd.Height,
 		from,
 	)
 
 	return err
-}
-
-func buildSaveRecordMetadata(img *catphotofetch.Image, filePath string) (string, string, string, int64, error) {
-	if img == nil {
-		return "", "", "", 0, errors.New("image is nil")
-	}
-	if filePath == "" {
-		return "", "", "", 0, errors.New("file path is empty")
-	}
-
-	filename := filepath.Base(filePath)
-	extension := strings.TrimPrefix(strings.ToLower(filepath.Ext(filePath)), ".")
-	mimeType := img.ContentType
-	if mimeType == "" {
-		mimeType = "application/octet-stream"
-	}
-
-	sizeBytes := int64(len(img.Data))
-	if sizeBytes == 0 {
-		fileInfo, err := os.Stat(filePath)
-		if err != nil {
-			return "", "", "", 0, fmt.Errorf("failed to inspect saved file %s: %w", filePath, err)
-		}
-		sizeBytes = fileInfo.Size()
-	}
-
-	if extension == "" {
-		extension = strings.TrimPrefix(strings.ToLower(filepath.Ext(filename)), ".")
-	}
-
-	return filename, extension, mimeType, sizeBytes, nil
 }

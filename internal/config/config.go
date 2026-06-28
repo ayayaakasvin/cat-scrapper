@@ -20,9 +20,10 @@ type Config struct {
 	// Port int `yaml:"port"`
 	HTTPServerConfig `yaml:"http-server"`
 	CorsConfig       `yaml:"cors"`
-	Logger           LoggerConfig `yaml:"logger"`
-	SavePath         string       `yaml:"save_path"`
-	SqLiteConfig     SQLiteConfig `yaml:"sqlite"`
+	Logger           LoggerConfig    `yaml:"logger"`
+	SavePath         string          `yaml:"save_path"`
+	SqLiteConfig     SQLiteConfig    `yaml:"sqlite"`
+	ImagePool        ImagePoolConfig `yaml:"image_pool"`
 }
 
 type LoggerConfig struct {
@@ -49,6 +50,11 @@ type HTTPServerConfig struct {
 	Address     string        `yaml:"address" env-default:"localhost:8080"`
 	Timeout     time.Duration `yaml:"timeout" env-required:"true"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" env-required:"true"`
+}
+
+type ImagePoolConfig struct {
+	Timeout time.Duration `yaml:"timeout" env-default:"5s"`
+	Workers int           `yaml:"workers" env-default:"5"`
 }
 
 type SQLiteConfig struct {

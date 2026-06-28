@@ -2,14 +2,12 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"text/template"
 
-	catphotofetch "github.com/ayayaakasvin/cat-photo-fetch"
 	"github.com/ayayaakasvin/cat-scrapper/internal/domain"
 )
 
@@ -36,7 +34,7 @@ func (s stubRepo) GetAllIDs(context.Context,) ([]string, error) {
 	return ids, nil
 }
 
-func (s stubRepo) SaveRecord(context.Context, string, *catphotofetch.Image, string) error {
+func (s stubRepo) SaveRecord(context.Context, string, *domain.FileMetaData) error {
 	return nil
 }
 
@@ -46,10 +44,6 @@ func (s stubRepo) GetByID(context.Context, string) (*domain.FileMetaData, error)
 
 func (s stubRepo) DeleteRecord(string) error {
 	return nil
-}
-
-func (s stubRepo) Stats() sql.DBStats {
-	return sql.DBStats{}
 }
 
 func (s stubRepo) Close() error {

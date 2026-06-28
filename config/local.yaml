@@ -22,3 +22,7 @@ save_path: "/mnt/codebase/code/vscode/cat-scrapper/cats"
 
 sqlite:
   db_name: "cats_metadata.db"
+
+image_pool:
+  timeout: 60s
+  workers: 5

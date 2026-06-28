@@ -1,17 +1,11 @@
 package domain
 
 import (
-	catphotofetch "github.com/ayayaakasvin/cat-photo-fetch"
+	"io"
 )
 
+// reformat with more generic methods
 type ImageFileSystem interface {
-	SaveImage(*catphotofetch.Image) (string, error)
-	DeleteImage(*FileMetaData) (error)
-}
-
-type FSEStats struct {
-	OverallQueries uint64
-	ActiveQueries  int64
-	FailedQueries  uint64
-	AvgLatency     int64
+	SaveImage(io.ReadCloser, ...string) (string, error)
+	DeleteImage(...string) (error)
 }

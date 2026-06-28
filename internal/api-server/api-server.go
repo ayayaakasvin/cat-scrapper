@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	imagepool "github.com/ayayaakasvin/cat-photo-fetch/image-pool"
+	"github.com/ayayaakasvin/cat-photo-fetch/imagepool"
 	"github.com/ayayaakasvin/cat-scrapper/internal/api-server/handlers"
 	"github.com/ayayaakasvin/cat-scrapper/internal/api-server/middlewares"
 	"github.com/ayayaakasvin/cat-scrapper/internal/config"
@@ -100,6 +100,7 @@ func (s *ApiServer) setupLightMux() {
 	apiGroup.NewRoute("/dashboard/nuke").Handle(http.MethodDelete, hndlrs.NukeHandler())
 	apiGroup.NewRoute("/dashboard/appstat").Handle(http.MethodGet, hndlrs.DashboardAppStatHandler())
 	apiGroup.NewRoute("/files").Handle(http.MethodGet, hndlrs.ServeFile())
+	apiGroup.NewRoute("/thumb").Handle(http.MethodGet, hndlrs.ServeThumbFile())
 
 	s.logger.Info("LightMux has been set up")
 	s.logger.Info("Available handlers")

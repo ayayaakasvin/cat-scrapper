@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -11,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	imagepool "github.com/ayayaakasvin/cat-photo-fetch/image-pool"
+	"github.com/ayayaakasvin/cat-photo-fetch/imagepool"
 	apiserver "github.com/ayayaakasvin/cat-scrapper/internal/api-server"
 	"github.com/ayayaakasvin/cat-scrapper/internal/api-server/libs/appstat"
 	"github.com/ayayaakasvin/cat-scrapper/internal/config"
@@ -45,7 +46,9 @@ func run() error {
 		return fmt.Errorf("init save engine error: %w", err)
 	}
 
-	pool, err := imagepool.NewCatImagePool()
+	pool, err := imagepool.NewCatImagePool(cfg.ImagePool.Workers, &http.Client{
+		Timeout: cfg.ImagePool.Timeout,
+	})
 	if err != nil {
 		return fmt.Errorf("init image pool error: %w", err)
 	}
