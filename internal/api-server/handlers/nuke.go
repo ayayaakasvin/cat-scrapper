@@ -32,12 +32,13 @@ func (h *Handlers) NukeHandler() http.HandlerFunc {
 				ID:      ulid.Make().String(),
 				Context: r.Context(),
 				Exec: func(ctx context.Context) error {
-					err := h.ifs.DeleteImage(rec.Filepath)
+					err := h.ifs.DeleteImage("original", rec.Filename)
 					if err != nil {
 						return fmt.Errorf("failed to delete original image: %v", err)
 					}
 
-					err = h.ifs.DeleteImage(rec.Thumbpath)
+					thumbFileName := rec.UUID + ".webp"
+					err = h.ifs.DeleteImage("thumb", thumbFileName)
 					if err != nil {
 						return fmt.Errorf("failed to delete thumb image: %v", err)
 					}

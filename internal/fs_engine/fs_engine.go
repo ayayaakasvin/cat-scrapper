@@ -65,8 +65,13 @@ func (e *FSEngine) SaveImage(r io.ReadCloser, pathToFile ...string) (string, err
 }
 
 func (e *FSEngine) DeleteImage(pathToFile ...string) error {
-	if err := os.Remove(filepath.Join(pathToFile...)); err != nil {
-		return err
+	if len(pathToFile) == 0 {
+		return fmt.Errorf("missing file path")
+	}
+
+	fullpath := filepath.Join(e.savePath, filepath.Join(pathToFile...))
+	if err := os.Remove(fullpath); err != nil {
+		return fmt.Errorf("failed to remove file %s: %w", fullpath, err)
 	}
 
 	return nil
