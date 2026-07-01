@@ -48,6 +48,10 @@ func run() error {
 
 	pool, err := imagepool.NewCatImagePool(cfg.ImagePool.Workers, &http.Client{
 		Timeout: cfg.ImagePool.Timeout,
+		Transport: &http.Transport{
+			MaxIdleConns:        64,
+			MaxIdleConnsPerHost: 64,
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("init image pool error: %w", err)
